@@ -1,0 +1,25 @@
+N = 10;      %ADC 分辨率
+fs = 10e6;   %ADC采样率
+Vref = 1.8;  %ADC参考电压
+Cu = 1e-15;  %ADC的单位电容
+sigmaCu = 0.1;
+C_arr = [2.^(N-1:-1:0),1].*Cu;%电容阵列
+C_arr_exact =(2.^(N-1:-1:0)).*Cu;%排除最后一个电容的电容阵列
+weight = 2.^(N-1:-1:0);%权重
+C_dev = sigmaCu*Cu*sqrt(C_arr/Cu).*randn(1,N+1);
+C_arr = C_arr + C_dev;
+C_dev_exact = sigmaCu*Cu*sqrt(weight).*randn(1,N);
+C_arr_exact = C_arr_exact + C_dev_exact;
+C_tot = sum(C_arr);  %总电容大小
+num = 2^12;          %采样点数
+fin = (1141/num)*fs; %输入信号频率
+ts = 1/fs;           %输入信号采样周期
+t = (0:1:num-1)*ts;  %采样序列
+Com_offset = 0.0;
+Com_noise = 0.0*randn(1,1);
+gnd = Com_offset+Com_noise;
+Vin = Vref/2 + (Vref/2)*sin(2*pi*fin*t);%输入信号采样
+[V,Vout] = SAR_ADC_logic(Vref,fin,t,C_tot,C_arr_exact,num,weight,N,gnd);%调用SAR逻辑函数生成转换后数字量对于的模拟值
+[ENOB,SNDR] = test(V,num,fs);%进行ENOB与SNDR的测试
+test2(Vref,N,C_arr_exact,C_tot,weight,gnd); %进行DNL与INL的测试    
+[DNLmax,DNLmin,INLmax,INLmin]=Static_test(Vout,N);
